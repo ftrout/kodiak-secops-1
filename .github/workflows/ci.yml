@@ -20,13 +20,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black
-      
+          pip install ruff black mypy pip-audit
+          pip install -e ".[dev]"
+
       - name: Run Ruff
         run: ruff check src/
-      
+
       - name: Run Black
         run: black --check src/ tests/
+
+      - name: Run mypy type checking
+        run: mypy src/soc_triage_agent --ignore-missing-imports
+
+      - name: Run security audit
+        run: pip-audit --strict --ignore-vuln GHSA-2g68-c3qc-8985 || true
 
   test:
     runs-on: ubuntu-latest
