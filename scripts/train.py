@@ -13,14 +13,48 @@ Supports:
 """
 
 import argparse
+import importlib.util
 import json
+import logging
 import os
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 import torch
+from datasets import Dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    DataCollatorForSeq2Seq,
+    Trainer,
+    TrainingArguments,
+    set_seed,
+)
+from transformers.trainer_utils import get_last_checkpoint
+
+# Configure logging
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+# Optional imports
+try:
+    from peft import (
+        LoraConfig,
+        TaskType,
+        get_peft_model,
+        prepare_model_for_kbit_training,
+    )
+
+    PEFT_AVAILABLE = True
+except ImportError:
+    PEFT_AVAILABLE = False
+    logger.warning("PEFT not available. LoRA training disabled.")
 
 
 def validate_data_files(train_file: str, validation_file: Optional[str] = None) -> None:
@@ -73,36 +107,10 @@ def validate_data_files(train_file: str, validation_file: Optional[str] = None) 
                 f"Validation file is not valid JSONL: {validation_file} - {e}"
             ) from e
 
-    print(f"✓ Training file validated: {train_file}")
+    logger.info(f"Training file validated: {train_file}")
     if validation_file:
-        print(f"✓ Validation file validated: {validation_file}")
-from datasets import Dataset
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    DataCollatorForSeq2Seq,
-    Trainer,
-    TrainingArguments,
-    set_seed,
-)
-from transformers.trainer_utils import get_last_checkpoint
+        logger.info(f"Validation file validated: {validation_file}")
 
-# Optional imports
-try:
-    from peft import (
-        LoraConfig,
-        TaskType,
-        get_peft_model,
-        prepare_model_for_kbit_training,
-    )
-
-    PEFT_AVAILABLE = True
-except ImportError:
-    PEFT_AVAILABLE = False
-    print("PEFT not available. Install with: pip install peft")
-
-import importlib.util
 
 WANDB_AVAILABLE = importlib.util.find_spec("wandb") is not None
 

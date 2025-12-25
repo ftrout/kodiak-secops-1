@@ -177,7 +177,7 @@ Provide your response in a structured format that can be easily parsed and actio
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        print(f"Loading model from {model_name_or_path}...")
+        logger.info(f"Loading model from {model_name_or_path}...")
 
         # Check if this is a PEFT adapter directory
         adapter_config_path = Path(model_name_or_path) / "adapter_config.json"
@@ -185,7 +185,7 @@ Provide your response in a structured format that can be easily parsed and actio
 
         if is_peft_adapter:
             # Load PEFT adapter
-            print("Detected PEFT adapter, loading base model first...")
+            logger.info("Detected PEFT adapter, loading base model first...")
 
             with open(adapter_config_path) as f:
                 adapter_config = json.load(f)
@@ -194,7 +194,7 @@ Provide your response in a structured format that can be easily parsed and actio
             if not base_model_name:
                 raise ValueError("adapter_config.json missing base_model_name_or_path")
 
-            print(f"Base model: {base_model_name}")
+            logger.info(f"Base model: {base_model_name}")
 
             # Load tokenizer from base model
             tokenizer = AutoTokenizer.from_pretrained(
@@ -222,7 +222,7 @@ Provide your response in a structured format that can be easily parsed and actio
                         bnb_4bit_quant_type="nf4",
                     )
                 except ImportError:
-                    print("Warning: bitsandbytes not available")
+                    logger.warning("bitsandbytes not available")
             elif load_in_8bit:
                 model_kwargs["load_in_8bit"] = True
 
@@ -239,9 +239,9 @@ Provide your response in a structured format that can be easily parsed and actio
             try:
                 from peft import PeftModel
 
-                print(f"Loading adapter from {model_name_or_path}...")
+                logger.info(f"Loading adapter from {model_name_or_path}...")
                 model = PeftModel.from_pretrained(model, model_name_or_path)
-                print("Adapter loaded successfully")
+                logger.info("Adapter loaded successfully")
             except ImportError as err:
                 raise ImportError(
                     "peft required for loading adapters. Install with: pip install peft"
@@ -276,7 +276,7 @@ Provide your response in a structured format that can be easily parsed and actio
                         bnb_4bit_quant_type="nf4",
                     )
                 except ImportError:
-                    print("Warning: bitsandbytes not available")
+                    logger.warning("bitsandbytes not available")
 
             if use_flash_attention:
                 model_kwargs["attn_implementation"] = "flash_attention_2"
@@ -289,7 +289,7 @@ Provide your response in a structured format that can be easily parsed and actio
         if device == "cpu":
             model = model.to("cpu")
 
-        print(f"Model loaded successfully on {device}")
+        logger.info(f"Model loaded successfully on {device}")
 
         return cls(
             model=model,
@@ -324,10 +324,19 @@ Provide your response in a structured format that can be easily parsed and actio
 
         import os
 
+        resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not resolved_api_key:
+            raise ValueError(
+                "OpenAI API key not provided. Either pass api_key parameter "
+                "or set OPENAI_API_KEY environment variable."
+            )
+
         client = OpenAI(
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
+            api_key=resolved_api_key,
             base_url=api_base,
         )
+
+        logger.info(f"Initialized OpenAI client for model: {model_name}")
 
         instance = cls(
             model=None,
@@ -367,11 +376,27 @@ Provide your response in a structured format that can be easily parsed and actio
 
         import os
 
+        resolved_api_key = api_key or os.getenv("AZURE_OPENAI_KEY")
+        resolved_endpoint = endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        if not resolved_api_key:
+            raise ValueError(
+                "Azure OpenAI API key not provided. Either pass api_key parameter "
+                "or set AZURE_OPENAI_KEY environment variable."
+            )
+        if not resolved_endpoint:
+            raise ValueError(
+                "Azure OpenAI endpoint not provided. Either pass endpoint parameter "
+                "or set AZURE_OPENAI_ENDPOINT environment variable."
+            )
+
         client = AzureOpenAI(
-            api_key=api_key or os.getenv("AZURE_OPENAI_KEY"),
-            azure_endpoint=endpoint or os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=resolved_api_key,
+            azure_endpoint=resolved_endpoint,
             api_version=api_version,
         )
+
+        logger.info(f"Initialized Azure OpenAI client for deployment: {deployment_name}")
 
         instance = cls(
             model=None,
@@ -545,9 +570,7 @@ Provide your response in a structured format that can be easily parsed and actio
                 fields_parsed += 1
             else:
                 # Try to get key factors
-                factors_match = re.search(
-                    r"### Key Factors\n(.+?)(?=###|\Z)", response, re.DOTALL
-                )
+                factors_match = re.search(r"### Key Factors\n(.+?)(?=###|\Z)", response, re.DOTALL)
                 if factors_match:
                     reasoning = factors_match.group(1).strip()
                     fields_parsed += 1
@@ -629,7 +652,9 @@ Provide your response in a structured format that can be easily parsed and actio
             if self.model_type in ["openai", "azure"]:
                 return self._predict_api(user_message, max_new_tokens, temperature, **kwargs)
             else:
-                return self._predict_transformers(user_message, max_new_tokens, temperature, **kwargs)
+                return self._predict_transformers(
+                    user_message, max_new_tokens, temperature, **kwargs
+                )
         except TriageModelError:
             raise
         except Exception as e:
