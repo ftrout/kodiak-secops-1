@@ -223,6 +223,156 @@ Kodiak SecOps 1 is fine-tuned from [Meta's Llama 3.1 8B Instruct](https://huggin
 - Strong instruction-following capabilities
 - Multilingual support
 
+### How do I choose the right foundation model?
+
+Choosing the right base model is critical. Here's a comprehensive guide:
+
+#### Model Size vs. Hardware Requirements
+
+| Model Size | Parameters | VRAM (LoRA) | VRAM (QLoRA) | Inference Speed | Quality |
+|------------|------------|-------------|--------------|-----------------|---------|
+| **3B** | 3 billion | 10GB | 6GB | Very Fast | Good |
+| **7-8B** | 7-8 billion | 20GB | 10GB | Fast | Very Good |
+| **13B** | 13 billion | 32GB | 16GB | Medium | Excellent |
+| **70B** | 70 billion | 160GB | 48GB | Slow | Best |
+
+#### Recommended Models by Use Case
+
+**For Production (Best Quality + Reasonable Speed):**
+```
+meta-llama/Llama-3.1-8B-Instruct  ← Recommended default
+```
+- Best balance of quality, speed, and memory
+- Well-tested, widely supported
+- Strong instruction following
+
+**For Limited Hardware (12-16GB VRAM):**
+```
+meta-llama/Llama-3.2-3B-Instruct
+microsoft/Phi-3-mini-4k-instruct
+```
+- Smaller but still capable
+- Fast inference
+- Good for edge deployment
+
+**For Maximum Quality (48GB+ VRAM or cloud):**
+```
+meta-llama/Llama-3.1-70B-Instruct
+Qwen/Qwen2.5-72B-Instruct
+```
+- Best reasoning capabilities
+- Requires multi-GPU or cloud
+- Slower but most accurate
+
+**For Specific Languages:**
+```
+Qwen/Qwen2.5-7B-Instruct      # Best for Chinese + English
+mistralai/Mistral-7B-Instruct  # Strong European languages
+```
+
+#### Decision Flowchart
+
+```
+                    ┌─────────────────────────┐
+                    │  What's your GPU VRAM?  │
+                    └───────────┬─────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+        ▼                       ▼                       ▼
+   ┌─────────┐            ┌─────────┐            ┌─────────┐
+   │  <16GB  │            │ 16-24GB │            │  >48GB  │
+   └────┬────┘            └────┬────┘            └────┬────┘
+        │                      │                      │
+        ▼                      ▼                      ▼
+┌───────────────┐      ┌───────────────┐      ┌───────────────┐
+│ Llama 3.2 3B  │      │ Llama 3.1 8B  │      │ Llama 3.1 70B │
+│    + QLoRA    │      │ + LoRA/QLoRA  │      │   + QLoRA     │
+└───────────────┘      └───────────────┘      └───────────────┘
+        │                      │                      │
+        ▼                      ▼                      ▼
+   Good quality          Best balance          Highest quality
+   Fast inference        Recommended           Slower inference
+```
+
+#### Model Comparison for Security Tasks
+
+| Model | Reasoning | Speed | Context | Security Knowledge | License |
+|-------|-----------|-------|---------|-------------------|---------|
+| **Llama 3.1 8B** | ★★★★☆ | ★★★★☆ | 128K | ★★★★☆ | Open (commercial OK) |
+| **Llama 3.2 3B** | ★★★☆☆ | ★★★★★ | 128K | ★★★☆☆ | Open (commercial OK) |
+| **Mistral 7B** | ★★★★☆ | ★★★★☆ | 32K | ★★★☆☆ | Apache 2.0 |
+| **Phi-3 Mini** | ★★★☆☆ | ★★★★★ | 4K | ★★☆☆☆ | MIT |
+| **Qwen2.5 7B** | ★★★★☆ | ★★★★☆ | 128K | ★★★★☆ | Apache 2.0 |
+| **Llama 3.1 70B** | ★★★★★ | ★★☆☆☆ | 128K | ★★★★★ | Open (commercial OK) |
+
+#### Key Factors to Consider
+
+1. **VRAM Availability**
+   - Check with `nvidia-smi`
+   - Leave 2-4GB headroom for system
+   - QLoRA roughly halves requirements
+
+2. **Inference Latency Requirements**
+   - Real-time triage: Use 3B-8B models
+   - Batch processing: Can use larger models
+   - Smaller = faster
+
+3. **Quality Requirements**
+   - Critical decisions: Use 8B+ models
+   - High-volume triage: 3B may suffice
+   - Test with your data!
+
+4. **Context Length**
+   - Most alerts: 1-2K tokens sufficient
+   - Alert + full context: May need 4K+
+   - Long investigation chains: 8K+
+
+5. **Licensing**
+   - Commercial use: Check model license
+   - Llama: Requires Meta agreement
+   - Mistral/Qwen: Apache 2.0 (permissive)
+
+#### Practical Examples
+
+**Example 1: Home Lab / Learning**
+```bash
+# RTX 3060 12GB - Use 3B with QLoRA
+python scripts/train.py \
+    --model_name_or_path meta-llama/Llama-3.2-3B-Instruct \
+    --use_lora --use_4bit
+```
+
+**Example 2: Enterprise Workstation**
+```bash
+# RTX 4090 24GB - Use 8B with LoRA
+python scripts/train.py \
+    --model_name_or_path meta-llama/Llama-3.1-8B-Instruct \
+    --use_lora --gradient_checkpointing
+```
+
+**Example 3: Cloud/Data Center**
+```bash
+# A100 80GB - Use 70B with QLoRA
+python scripts/train.py \
+    --model_name_or_path meta-llama/Llama-3.1-70B-Instruct \
+    --use_lora --use_4bit
+```
+
+#### Where to Find Models
+
+All models available on HuggingFace:
+- **Llama models**: [meta-llama](https://huggingface.co/meta-llama) (requires access request)
+- **Mistral models**: [mistralai](https://huggingface.co/mistralai)
+- **Qwen models**: [Qwen](https://huggingface.co/Qwen)
+- **Phi models**: [microsoft](https://huggingface.co/microsoft)
+
+To request Llama access:
+1. Go to [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)
+2. Click "Request access"
+3. Fill out the form (usually approved within hours)
+4. Run `huggingface-cli login` with your token
+
 ---
 
 ## How It Works
