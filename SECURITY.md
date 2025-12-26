@@ -15,7 +15,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please send an email to: ftrout@users.noreply.github.com
+Instead, please use [GitHub's private vulnerability reporting](https://github.com/ftrout/kodiak-secops-1/security/advisories/new) to submit a report.
 
 Include the following information:
 - Description of the vulnerability
