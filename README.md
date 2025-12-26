@@ -380,6 +380,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 - **Model**: [huggingface.co/ftrout/kodiak-secops-1](https://huggingface.co/ftrout/kodiak-secops-1)
 - **Dataset**: [huggingface.co/datasets/ftrout/kodiak-secops-1-dataset](https://huggingface.co/datasets/ftrout/kodiak-secops-1-dataset)
+- **FAQ**: [Frequently Asked Questions](FAQ.md) - Learn how everything works
 
 ---
 
