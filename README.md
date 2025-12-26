@@ -141,6 +141,8 @@ hybrid_data = loader.generate_hybrid_dataset(
 
 ### Train a Model
 
+> **Recommended:** Use the included [devcontainer](.devcontainer/) for training. It comes pre-configured with CUDA, PyTorch, and all dependencies. Open this repo in VS Code or GitHub Codespaces and select "Reopen in Container".
+
 ```bash
 python scripts/train.py \
     --model_name_or_path meta-llama/Llama-3.1-8B-Instruct \
@@ -151,6 +153,22 @@ python scripts/train.py \
     --lora_r 64 \
     --lora_alpha 128 \
     --num_train_epochs 3
+```
+
+### Upload to HuggingFace Hub
+
+```bash
+# Upload trained model
+python scripts/upload_to_hub.py model --model-path ./outputs/kodiak-secops-1
+
+# Upload dataset
+python scripts/upload_to_hub.py dataset --data-path ./data/train.jsonl
+
+# Generate fresh dataset and upload
+python scripts/upload_to_hub.py generate --num-samples 10000
+
+# Dry run (see what would be uploaded)
+python scripts/upload_to_hub.py model --model-path ./outputs/kodiak-secops-1 --dry-run
 ```
 
 ## Project Structure
@@ -168,7 +186,8 @@ kodiak-secops-1/
 │   ├── model.py              # Model wrapper and inference
 │   └── evaluation.py         # Evaluation metrics
 ├── scripts/
-│   └── train.py              # Training script
+│   ├── train.py              # Training script
+│   └── upload_to_hub.py      # HuggingFace Hub upload
 ├── configs/
 │   ├── train_lora.yaml       # LoRA training config
 │   └── train_qlora.yaml      # QLoRA training config
@@ -361,6 +380,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 - **Model**: [huggingface.co/ftrout/kodiak-secops-1](https://huggingface.co/ftrout/kodiak-secops-1)
 - **Dataset**: [huggingface.co/datasets/ftrout/kodiak-secops-1-dataset](https://huggingface.co/datasets/ftrout/kodiak-secops-1-dataset)
+- **FAQ**: [Frequently Asked Questions](FAQ.md) - Learn how everything works
 
 ---
 
